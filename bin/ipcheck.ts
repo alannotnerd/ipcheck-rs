@@ -71,8 +71,8 @@ function ipToBytes(ip: string): Uint8Array {
     return ip.includes(':') ? ipv6ToBytes(ip) : ipv4ToBytes(ip);
 }
 
-function isLeaf(node: [bigint, bigint]): boolean {
-    return node[0] === 0n && node[1] === 0n;
+function isLeaf(node: [number, number]): boolean {
+    return node[0] === 0 && node[1] === 0;
 }
 
 export function ipCheck(ip: string): boolean {
@@ -84,15 +84,15 @@ export function ipCheck(ip: string): boolean {
         const byte = bytes[byteIndex];
         // Loop through each bit from MSB (7) to LSB (0)
         for (let bitIndex = 7; bitIndex >= 0; bitIndex--) {
-            const bit = Number((byte >> bitIndex) & 1);
+            const bit = (byte >> bitIndex) & 1;
             if (isLeaf(root)) {
                 return true;
             }
 
-            if (root[bit] === 0n) {
+            if (root[bit] === 0) {
                 return false
             } else {
-                root = IP_FILTER[Number(root[bit])];
+                root = IP_FILTER[root[bit]];
             }
         }
     }
@@ -100,5 +100,5 @@ export function ipCheck(ip: string): boolean {
     return isLeaf(root);
 }
 
-const IP_FILTER_V4: [bigint, bigint][] = {{ filterV4 }};
-const IP_FILTER_V6: [bigint, bigint][] = {{ filterV6 }};
+const IP_FILTER_V4: [number, number][] = {{ filterV4 }};
+const IP_FILTER_V6: [number, number][] = {{ filterV6 }};

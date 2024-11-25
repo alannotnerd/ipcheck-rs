@@ -98,13 +98,13 @@ fn main() -> Result<()> {
 
     let filter_v4 = nodes
         .into_iter()
-        .map(|(a, b)| format!("[{}n, {}n]", a, b))
+        .map(|(a, b)| format!("[{},{}]", a, b))
         .collect::<Vec<_>>()
         .join(",");
 
     let filter_v6 = nodes_v6
         .into_iter()
-        .map(|(a, b)| format!("[{}n, {}n]", a, b))
+        .map(|(a, b)| format!("[{},{}]", a, b))
         .collect::<Vec<_>>()
         .join(",");
 
