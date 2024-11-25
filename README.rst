@@ -32,7 +32,7 @@ Usage
 
 .. code-block:: bash
 
-    ipcheck input.csv -o ipcheck.ts
+    ipcheck ipv4.csv ipv6.csv output.ts
 
 3. Use the generated TypeScript module:
 

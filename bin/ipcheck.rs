@@ -1,3 +1,4 @@
+use std::env;
 use std::fs::File;
 use std::io::Write;
 use std::str::FromStr;
@@ -85,15 +86,26 @@ struct IpCheckTemplate {
 }
 
 fn main() -> Result<()> {
-    let range: IpRange<Ipv4Net> =
-        load_csv("data/GeoIP2-Anonymous-IP-CSV_20241124/GeoIP2-Anonymous-IP-Blocks-IPv4.csv")?;
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 4 {
+        eprintln!(
+            "Usage: {} <ipv4_csv_path> <ipv6_csv_path> <output_filename>",
+            args[0]
+        );
+        std::process::exit(1);
+    }
 
-    let trie = range.clone().into_trie().into_boxed_node().unwrap();
+    let ipv4_path = &args[1];
+    let ipv6_path = &args[2];
+    let output_path = &args[3];
+
+    let range: IpRange<Ipv4Net> = load_csv(ipv4_path)?;
+
+    let trie = range.into_trie().into_boxed_node().unwrap();
     let nodes = trie_to_nodes(trie);
 
-    let range_v6: IpRange<Ipv6Net> =
-        load_csv("data/GeoIP2-Anonymous-IP-CSV_20241124/GeoIP2-Anonymous-IP-Blocks-IPv6.csv")?;
-    let trie_v6 = range_v6.clone().into_trie().into_boxed_node().unwrap();
+    let range_v6: IpRange<Ipv6Net> = load_csv(ipv6_path)?;
+    let trie_v6 = range_v6.into_trie().into_boxed_node().unwrap();
     let nodes_v6 = trie_to_nodes(trie_v6);
 
     let filter_v4 = nodes
@@ -117,7 +129,7 @@ fn main() -> Result<()> {
         },
     )?;
 
-    let mut file = File::create("ipcheck.ts")?;
+    let mut file = File::create(output_path)?;
     file.write_all(code.as_bytes())?;
 
     Ok(())
