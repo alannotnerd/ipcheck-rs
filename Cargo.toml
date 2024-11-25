@@ -1,12 +1,12 @@
 [package]
 name = "ipcheck-rs"
-version = "0.6.7"
-authors = ["Yilin Chen <sticnarf@gmail.com>"]
-description = "A library to manage IP ranges"
-repository = "https://github.com/sticnarf/iprange-rs"
-readme = "README.md"
-documentation = "https://docs.rs/iprange/"
-categories = ["network-programming"]
+version = "1.0.0"
+authors = ["Alan WANG <alan1995wang@outlook.com>"]
+description = "A command tool generates typescript ip checker from CIDR"
+repository = "https://github.com/alannotnerd/ipcheck-rs"
+readme = "README.rst"
+categories = ["network-programming", "command-line-utilities"]
+keywords = ["ip", "ipv4", "ipv6", "network", "filter"]
 license = "MIT"
 edition = "2021"
 
