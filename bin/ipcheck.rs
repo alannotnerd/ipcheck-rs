@@ -29,49 +29,51 @@ where
     Ok(range)
 }
 
-fn trie_to_nodes(trie: Box<IpTrieNode>) -> Vec<(usize, usize)> {
+fn trie_to_nodes(trie: Box<IpTrieNode>) -> Vec<usize> {
     let mut nodes = Vec::new();
     let mut stack = vec![(trie.as_ref(), nodes.len())];
-    nodes.push((0, 0)); // Push root node initially
+    nodes.extend([0, 0]); // Push root node's left and right indices initially
 
     while let Some((node, idx)) = stack.pop() {
-        let mut left_idx = 0;
-        let mut right_idx = 0;
+        let base_idx = idx * 2;
 
         // Process right child first so it gets lower index
         if let Some(right) = &node.children[1] {
-            right_idx = nodes.len();
-            nodes.push((0, 0));
+            let right_idx = nodes.len() / 2;
+            nodes.extend([0, 0]);
             stack.push((right.as_ref(), right_idx));
+            nodes[base_idx + 1] = right_idx;
         }
 
         // Process left child
         if let Some(left) = &node.children[0] {
-            left_idx = nodes.len();
-            nodes.push((0, 0));
+            let left_idx = nodes.len() / 2;
+            nodes.extend([0, 0]);
             stack.push((left.as_ref(), left_idx));
+            nodes[base_idx] = left_idx;
         }
-
-        // Update current node's children indices
-        nodes[idx] = (left_idx, right_idx);
     }
 
     nodes
 }
 
 #[cfg(test)]
-fn nodes_to_trie(mut nodes: Vec<(usize, usize)>) -> Box<IpTrieNode> {
-    let mut cache = BTreeMap::new();
+fn nodes_to_trie(nodes: Vec<usize>) -> Box<IpTrieNode> {
+    let mut cache = std::collections::BTreeMap::new();
+    let node_count = nodes.len() / 2;
 
-    while let Some((left, right)) = nodes.pop() {
+    for i in (0..node_count).rev() {
         let mut children = [None, None];
-        if left != 0 {
-            children[0] = Some(cache.remove(&left).unwrap());
+        let left_idx = nodes[i * 2];
+        let right_idx = nodes[i * 2 + 1];
+
+        if left_idx != 0 {
+            children[0] = Some(cache.remove(&left_idx).unwrap());
         }
-        if right != 0 {
-            children[1] = Some(cache.remove(&right).unwrap());
+        if right_idx != 0 {
+            children[1] = Some(cache.remove(&right_idx).unwrap());
         }
-        cache.insert(nodes.len(), Box::new(IpTrieNode { children }));
+        cache.insert(i, Box::new(IpTrieNode { children }));
     }
 
     cache.remove(&0).unwrap()
@@ -110,13 +112,13 @@ fn main() -> Result<()> {
 
     let filter_v4 = nodes
         .into_iter()
-        .map(|(a, b)| format!("[{},{}]", a, b))
+        .map(|n| n.to_string())
         .collect::<Vec<_>>()
         .join(",");
 
     let filter_v6 = nodes_v6
         .into_iter()
-        .map(|(a, b)| format!("[{},{}]", a, b))
+        .map(|n| n.to_string())
         .collect::<Vec<_>>()
         .join(",");
 

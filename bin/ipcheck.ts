@@ -71,34 +71,80 @@ function ipToBytes(ip: string): Uint8Array {
     return ip.includes(':') ? ipv6ToBytes(ip) : ipv4ToBytes(ip);
 }
 
-function isLeaf(node: [number, number]): boolean {
-    return node[0] === 0 && node[1] === 0;
+function isLeaf(index: number, filter: Uint32Array): boolean {
+    return filter[index * 2] === 0 && filter[index * 2 + 1] === 0;
 }
 
-export function ipCheck(ip: string): boolean {
+interface IpCheckOptions {
+    includeCidr?: boolean;
+}
+
+interface IpCheckResult {
+    matches: boolean;
+    cidr: string;
+}
+
+function buildCidr(path: number[], isIpv6: boolean): string {
+    // Convert path of bits to IP and prefix length
+    const bytes = new Uint8Array(isIpv6 ? 16 : 4);
+    const prefixLength = path.length;
+
+    // Fill in the known bits from the path
+    for (let i = 0; i < path.length; i++) {
+        const byteIndex = Math.floor(i / 8);
+        const bitPosition = 7 - (i % 8);
+        bytes[byteIndex] |= (path[i] << bitPosition);
+    }
+
+    // Convert bytes to IP string
+    const parts = isIpv6 ?
+        // IPv6: Convert each pair of bytes to hex
+        Array.from({ length: 8 }, (_, i) =>
+            ((bytes[i * 2] << 8) | bytes[i * 2 + 1]).toString(16)
+        ).join(':') :
+        // IPv4: Convert each byte to decimal
+        Array.from(bytes).join('.');
+
+    return `${parts}/${prefixLength}`;
+}
+
+export function ipCheck(ip: string, options?: { includeCidr: true }): IpCheckResult;
+export function ipCheck(ip: string, options?: { includeCidr: false }): boolean;
+export function ipCheck(ip: string, options: IpCheckOptions = { includeCidr: false }): boolean | IpCheckResult {
     const bytes = ipToBytes(ip);
     const IP_FILTER = bytes.length === 4 ? IP_FILTER_V4 : IP_FILTER_V6;
+    const path: number[] | undefined = options.includeCidr ? [] : undefined;
 
-    let root = IP_FILTER[0];
+    let nodeIndex = 0;
     for (let byteIndex = 0; byteIndex < bytes.length; byteIndex++) {
         const byte = bytes[byteIndex];
-        // Loop through each bit from MSB (7) to LSB (0)
         for (let bitIndex = 7; bitIndex >= 0; bitIndex--) {
             const bit = (byte >> bitIndex) & 1;
-            if (isLeaf(root)) {
-                return true;
+            if (isLeaf(nodeIndex, IP_FILTER)) {
+                return options.includeCidr ? {
+                    matches: true,
+                    cidr: buildCidr(path as number[], bytes.length === 16)
+                } : true;
             }
 
-            if (root[bit] === 0) {
-                return false
-            } else {
-                root = IP_FILTER[root[bit]];
+            path?.push(bit);
+            const nextIndex = IP_FILTER[nodeIndex * 2 + bit];
+            if (nextIndex === 0) {
+                return options.includeCidr ? {
+                    matches: false,
+                    cidr: null
+                } : false;
             }
+            nodeIndex = nextIndex;
         }
     }
 
-    return isLeaf(root);
+    const matches = isLeaf(nodeIndex, IP_FILTER);
+    return options.includeCidr ? {
+        matches,
+        cidr: matches ? buildCidr(path as number[], bytes.length === 16) : null
+    } : matches;
 }
 
-const IP_FILTER_V4: [number, number][] = {{ filterV4 }};
-const IP_FILTER_V6: [number, number][] = {{ filterV6 }};
+const IP_FILTER_V4: Uint32Array = new Uint32Array({{ filterV4 }});
+const IP_FILTER_V6: Uint32Array = new Uint32Array({{ filterV6 }});
