@@ -40,11 +40,6 @@
 //! [`intersect`]: struct.IpRange.html#method.intersect
 //! [`exclude`]: struct.IpRange.html#method.exclude
 
-extern crate ipnet;
-#[cfg(feature = "serde")]
-#[macro_use]
-extern crate serde;
-
 use ipnet::{Ipv4Net, Ipv6Net};
 use std::collections::VecDeque;
 use std::fmt;
@@ -65,8 +60,6 @@ use std::net::{Ipv4Addr, Ipv6Addr};
 /// to iterate over the networks in an `IpRange`:
 ///
 /// ```
-/// extern crate ipnet;
-/// extern crate iprange;
 ///
 /// use iprange::IpRange;
 /// use ipnet::Ipv4Net;
@@ -103,6 +96,10 @@ impl<N: IpNet> IpRange<N> {
             trie: IpTrie::new(),
             phantom_net: PhantomData,
         }
+    }
+
+    pub fn into_trie(self) -> IpTrie<N> {
+        self.trie
     }
 
     /// Add a network to `self`.
@@ -304,6 +301,18 @@ where
     }
 }
 
+impl<N: IpNet> From<Box<IpTrieNode>> for IpRange<N> {
+    fn from(trie: Box<IpTrieNode>) -> Self {
+        IpRange {
+            trie: IpTrie {
+                root: Some(*trie),
+                phantom_net: PhantomData,
+            },
+            phantom_net: PhantomData,
+        }
+    }
+}
+
 #[cfg(feature = "serde")]
 impl<N: IpNet> serde::Serialize for IpRange<N> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -433,7 +442,7 @@ where
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
-struct IpTrie<N>
+pub struct IpTrie<N>
 where
     N: IpNet,
 {
@@ -450,6 +459,10 @@ where
             root: None,
             phantom_net: PhantomData,
         }
+    }
+
+    pub fn into_boxed_node(self) -> Option<Box<IpTrieNode>> {
+        self.root.map(|node| Box::new(node))
     }
 
     fn insert(&mut self, network: N) {
@@ -551,11 +564,11 @@ where
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(transparent))]
 pub struct IpTrieNode {
-    children: [Option<Box<IpTrieNode>>; 2],
+    pub children: [Option<Box<IpTrieNode>>; 2],
 }
 
 impl IpTrieNode {
-    fn new() -> IpTrieNode {
+    pub fn new() -> IpTrieNode {
         IpTrieNode {
             children: [None, None],
         }
